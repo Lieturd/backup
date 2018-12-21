@@ -1,0 +1,8 @@
+[package]
+name = "backupd"
+version = "0.1.0"
+authors = ["Isaac Lozano <109lozanoi@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+backuplib = { path = "../backuplib" }

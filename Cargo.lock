@@ -1,0 +1,18 @@
+[[package]]
+name = "backup-cli"
+version = "0.1.0"
+dependencies = [
+ "backuplib 0.1.0",
+]
+
+[[package]]
+name = "backupd"
+version = "0.1.0"
+dependencies = [
+ "backuplib 0.1.0",
+]
+
+[[package]]
+name = "backuplib"
+version = "0.1.0"
+

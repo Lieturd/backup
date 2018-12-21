@@ -1,0 +1,14 @@
+[[package]]
+name = "backup-cli"
+version = "0.1.0"
+dependencies = [
+ "backuplib 0.1.0 (git+https://github.com/Lieturd/backuplib)",
+]
+
+[[package]]
+name = "backuplib"
+version = "0.1.0"
+source = "git+https://github.com/Lieturd/backuplib#41dd787dcb227570a7caf2687a652e670181eaba"
+
+[metadata]
+"checksum backuplib 0.1.0 (git+https://github.com/Lieturd/backuplib)" = "<none>"

@@ -1,0 +1,1 @@
+# backuplib [![Build Status](https://travis-ci.org/Lieturd/backup-cli.svg?branch=master)](https://travis-ci.org/Lieturd/backup-cli)

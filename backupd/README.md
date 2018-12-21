@@ -1,0 +1,1 @@
+# backupd [![Build Status](https://travis-ci.org/Lieturd/backupd.svg?branch=master)](https://travis-ci.org/Lieturd/backupd)

@@ -1,0 +1,49 @@
+language: rust
+script:
+  - cargo build --verbose --release
+  - cargo test --verbose
+rust:
+  - stable
+  - beta
+  - nightly
+os:
+  - windows
+  - linux
+  - osx
+before_deploy:
+  - |
+    if [[ "$TRAVIS_OS_NAME" == "windows" ]]
+    then
+      mv target/release/backupd.exe backupd_windows-x64.exe
+      DEPLOY_FILE="backupd_windows-x64.exe"
+    fi
+  - |
+    if [[ "$TRAVIS_OS_NAME" == "linux" ]]
+    then
+      mv target/release/backupd backupd_linux-x64
+      DEPLOY_FILE="backupd_windows-x64.exe"
+    fi
+  - |
+    if [[ "$TRAVIS_OS_NAME" == "osx" ]]
+    then
+      mv target/release/backupd backupd_osx-x64
+      DEPLOY_FILE="backupd_osx-x64"
+    fi
+matrix:
+  allow_failures:
+    - rust: nightly
+  fast_finish: true
+deploy:
+  provider: releases
+  api_key:
+    secure: cQnYkESvIJiQHzWwYFf7/s8m/qCYc/4JhcgtHTPl72yop9TR4AdVLVPD+0J0DUpL/cihxz+AoI57uLCSjbjIcozAuA2dTRGcaBUbdxx70kqNwbPX2Gs6YYswWH2gY6sj3ptCfJTe99C0LkGBumuf9izrrfYO7Z3QptnCfOCUjn4ZHvvDbUlPx/XDBCbLSZmOekHvD0OG758JcPyWtZx2dkOmmU5piyzusU4aVUzFqMZrggPEjj2ZNqn1GpWtrja1HpwpFTjYlQ/JS2FZMN1VPncvRGdNQVLSKXTv+qGVYYfNLHdv5sOa2LvcXbfrmICS4sN8NtyVcM31OLyzgz7B9d3rFhqFtXCJrfyTgwcBqMZXIu+/o90lSYyCOzUX4TIf8w3IQJLDP+lFr3B4lIuwDLPEm8sleIQPUgGJkFHOGiTJXrbci6VjgrLlrlMCVQgkTOKZRbnVBiZXJq42v+rZbAhyXv+y4VbJachcmrp/uuQDsEMdD/U1BvY1JfbHS8AgzuFMy0xbZp+rgoLAcsCfnWyzGzJ78qa5JHECTvKzAwEs0Eg5VrffgsEHGTrPCv5L7hYntHWprV7U2ParubTBO7YeBrSRczqcwZCDPyZjLrSwYcv0JoB2307VlaKrga6DVOLL57O0nOdJLNh58qK4c3dnkUOiHWQPF8QEsf1NQ7E=
+  file: $DEPLOY_FILE
+  skip_cleanup: true
+  # Comment if we don't want to overview the
+  # release before actually making it public.
+  draft: true
+  on:
+    repo: Lieturd/backupd
+    branch: master
+    condition: $TRAVIS_RUST_VERSION = "stable"
+    tags: true
