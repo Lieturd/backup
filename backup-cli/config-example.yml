@@ -1,0 +1,3 @@
+backup-paths:
+  - /home/foo/
+  - /home/bar/documents/
