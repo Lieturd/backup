@@ -1,8 +1,4 @@
-# Lieturd backup
-
-# backup-cli [![Build Status](https://travis-ci.org/Lieturd/backup-cli.svg?branch=master)](https://travis-ci.org/Lieturd/backup-cli)
-# backupd [![Build Status](https://travis-ci.org/Lieturd/backupd.svg?branch=master)](https://travis-ci.org/Lieturd/backupd)
-# backuplib [![Build Status](https://travis-ci.org/Lieturd/backup-cli.svg?branch=master)](https://travis-ci.org/Lieturd/backup-cli)
+# Lieturd backup [![Build Status](https://travis-ci.org/Lieturd/backup.svg?branch=master)](https://travis-ci.org/Lieturd/backup)
 
 ## Building the Docker build environment base image
 
