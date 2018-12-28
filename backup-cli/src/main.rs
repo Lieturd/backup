@@ -1,4 +1,5 @@
 mod configuration;
+mod file_scanner;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
