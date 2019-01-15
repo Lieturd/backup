@@ -5,3 +5,11 @@ authors = ["Isaac Lozano <109lozanoi@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+grpc            = "~0.6"
+protobuf        = "~2"
+futures         = "~0.1"
+futures-cpupool = "~0.1"
+
+[build-dependencies]
+protoc-rust-grpc = "0.6"
+protoc-rust = "2.0"
