@@ -10,7 +10,7 @@ before_install:
   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
     wget https://github.com/protocolbuffers/protobuf/releases/download/v3.6.1/protoc-3.6.1-osx-x86_32.zip -O /tmp/protoc-3.6.1.zip
   fi
-  unzip /tmp/protoc-3.6.1.zip -d protoc-3.6.1.zip
+  unzip /tmp/protoc-3.6.1.zip -d protoc-3.6.1
   export PATH=$PATH:$PWD/protoc-3.6.1/bin/
 script:
 - cargo build --verbose --release
