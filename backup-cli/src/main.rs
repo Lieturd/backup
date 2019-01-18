@@ -34,8 +34,12 @@ fn main() {
 
     loop {
         // Get file head
-        let head_resp = client.get_head(RequestOptions::new(), token.clone());
+        let head_resp = client.get_head(RequestOptions::new(), token.get_token().clone());
         let head = head_resp.wait_drop_metadata().unwrap();
+        if head.get_status() == Status::ERROR {
+            println!("Error: {}", head.get_error_message());
+            break;
+        }
 
         // Read from file
         let mut buffer = [0; 1024];
@@ -48,17 +52,12 @@ fn main() {
 
         // Upload data
         let mut file_chunk = FileChunk::new();
-        file_chunk.set_token(token.get_token());
+        file_chunk.set_token(token.get_token().get_token());
         file_chunk.set_offset(head.get_offset());
         file_chunk.set_data(buffer_vec);
         let upload_resp = client.upload_chunk(RequestOptions::new(), file_chunk);
         if upload_resp.wait_drop_metadata().unwrap().get_checksum() != 0 {
             panic!("Bad upload_resp");
-        }
-
-        // We've finished uploading. Break.
-        if head.get_offset() + bytes as u64 == file_size {
-            break;
         }
     }
 }
