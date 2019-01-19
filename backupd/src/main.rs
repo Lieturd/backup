@@ -3,7 +3,7 @@ mod configuration;
 use std::env;
 use std::thread;
 
-use backuplib::proto::baacup_grpc::BaacupServer;
+use backuplib::server::BaacupServer;
 use backuplib::server::BaacupImpl;
 use backuplib::grpc::ServerBuilder;
 
