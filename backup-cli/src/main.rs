@@ -18,6 +18,7 @@ fn main() {
 
     // Open file
     let mut file = File::open(&filename).unwrap();
+    let file_size = file.metadata().unwrap().len();
 
     // Make client
     let client = BaacupClient::new_plain("127.0.0.1", 8000, Default::default()).unwrap();
@@ -26,7 +27,7 @@ fn main() {
     let file_data = FileMetadata {
         file_name: filename.into(),
         last_modified: 0,
-        file_size: file.metadata().unwrap().len(),
+        file_size: file_size,
     };
     let token = client.init_upload(file_data).unwrap();
 
@@ -58,6 +59,11 @@ fn main() {
         let checksum = client.upload_chunk(file_chunk).unwrap();
         if checksum != 0 {
             panic!("Bad upload_resp");
+        }
+
+        // Check if we've finished uploading.
+        if bytes as u64 + offset == file_size {
+            break;
         }
     }
 }
