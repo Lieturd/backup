@@ -1,50 +1,47 @@
 use std::sync::{Arc, Mutex};
 use std::path::PathBuf;
-use std::fs::{File, OpenOptions};
 use std::io::{Seek, Write, SeekFrom};
 use std::collections::HashMap;
 
 use crate::rpc::*;
+use crate::storage::{StorageManager, FileLen, FileSystem};
 pub use crate::proto::baacup_grpc::BaacupServer;
 
 struct Context {
     file_metadata: FileMetadata,
-    full_path: PathBuf,
 }
 
 impl Context {
-    fn new(file_metadata: FileMetadata, full_path: PathBuf) -> Context {
+    fn new(file_metadata: FileMetadata) -> Context {
         Context {
             file_metadata: file_metadata,
-            full_path: full_path,
         }
     }
 }
 
-pub struct BaacupImpl {
-    base_path: PathBuf,
+pub struct BaacupImpl<S> {
     next_token_mutex: Arc<Mutex<u32>>,
     token_map_mutex: Arc<Mutex<HashMap<u32, Context>>>,
+    storage: S,
 }
 
-impl BaacupImpl {
-    pub fn new<P>(path: P) -> BaacupImpl
+impl BaacupImpl<FileSystem> {
+    pub fn new<P>(path: P) -> BaacupImpl<FileSystem>
         where P: Into<PathBuf>,
     {
         BaacupImpl {
-            base_path: path.into(),
             next_token_mutex: Arc::new(Mutex::new(0)),
             token_map_mutex: Arc::new(Mutex::new(HashMap::new())),
+            storage: FileSystem::new(path),
         }
     }
 }
 
-impl Baacup for BaacupImpl {
+impl<'a, S> Baacup for BaacupImpl<S>
+    where S: StorageManager<'a>
+{
     fn init_upload(&self, metadata: FileMetadata) -> Result<u32, String> {
-        let full_path = self.base_path.join(&metadata.file_name);
-        println!("Got filename {:?}", metadata.file_name);
-        println!("full path: {:?}", full_path);
-        let _file = File::create(&full_path)
+        let _file = self.storage.create_storage(metadata.file_name.clone())
             .map_err(|e| e.to_string())?;
 
         // Get a token and increment token counter
@@ -54,7 +51,7 @@ impl Baacup for BaacupImpl {
         *next_token += 1;
 
         // Insert token into map
-        let context = Context::new(metadata, full_path);
+        let context = Context::new(metadata);
         let mut token_map = self.token_map_mutex.lock().unwrap();
         token_map.insert(token, context);
 
@@ -66,10 +63,9 @@ impl Baacup for BaacupImpl {
         let token_map = self.token_map_mutex.lock().unwrap();
         let context = token_map.get(&token)
             .ok_or("Invalid token".to_string())?;
-        let full_path = &context.full_path;
 
         // Get file length
-        let len = File::open(full_path).unwrap().metadata().unwrap().len();
+        let len = self.storage.open_storage(context.file_metadata.file_name.clone())?.len()?;
         Ok(len)
     }
 
@@ -78,18 +74,12 @@ impl Baacup for BaacupImpl {
 
         // Get file
         let mut token_map = self.token_map_mutex.lock().unwrap();
-        let metadata = token_map.get(&chunk.token)
+        let context = token_map.get(&chunk.token)
             .ok_or("Invalid token".to_string())?;
-        let full_path = &metadata.full_path;
-        let mut file = OpenOptions::new()
-            .write(true)
-            .open(full_path)
-            .map_err(|e| e.to_string())?;
+        let mut file = self.storage.open_storage(context.file_metadata.file_name.clone())?;
 
         // Double-check len
-        let file_len = file.metadata()
-            .map_err(|e| e.to_string())?
-            .len();
+        let file_len = file.len()?;
         if file_len != chunk.offset {
             return Err("Bad offset".to_string());
         }
@@ -101,8 +91,8 @@ impl Baacup for BaacupImpl {
             .map_err(|e| e.to_string())?;
 
         // Check if we're done
-        println!("{} {}", chunk.offset + chunk.data.len() as u64, metadata.file_metadata.file_size);
-        if chunk.offset + chunk.data.len() as u64 == metadata.file_metadata.file_size {
+        println!("{} {}", chunk.offset + chunk.data.len() as u64, context.file_metadata.file_size);
+        if chunk.offset + chunk.data.len() as u64 == context.file_metadata.file_size {
             println!("File upload finished.");
             token_map.remove(&chunk.token);
         }

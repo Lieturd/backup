@@ -1,10 +1,8 @@
-use std::path::PathBuf;
-
 use crate::proto::baacup;
 use crate::proto::baacup_grpc;
 
 pub struct FileMetadata {
-    pub file_name: PathBuf,
+    pub file_name: String,
     pub last_modified: u32,
     pub file_size: u64,
 }
@@ -25,9 +23,9 @@ pub trait Baacup {
 impl<T> baacup_grpc::Baacup for T
     where T: Baacup
 {
-    fn init_upload(&self, _o: grpc::RequestOptions, p: baacup::FileMetadata) -> grpc::SingleResponse<baacup::InitUploadResponse> {
+    fn init_upload(&self, _o: grpc::RequestOptions, mut p: baacup::FileMetadata) -> grpc::SingleResponse<baacup::InitUploadResponse> {
         let metadata = FileMetadata {
-            file_name: p.get_file_name().into(),
+            file_name: p.take_file_name(),
             last_modified: p.get_last_modified(),
             file_size: p.get_file_size(),
         };

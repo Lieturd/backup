@@ -16,7 +16,7 @@ impl grpc::ClientStub for BaacupClient {
 impl Baacup for BaacupClient {
     fn init_upload(&self, metadata: FileMetadata) -> Result<u32, String> {
         let mut file_metadata = baacup::FileMetadata::new();
-        file_metadata.set_file_name(metadata.file_name.to_str().unwrap().into());
+        file_metadata.set_file_name(metadata.file_name.into());
         file_metadata.set_last_modified(metadata.last_modified);
         file_metadata.set_file_size(metadata.file_size);
 
