@@ -4,7 +4,8 @@ use std::io::{Seek, Write, SeekFrom};
 use std::collections::HashMap;
 
 use backuplib::rpc::*;
-use backuplib::storage::{StorageManager, FileLen, FileSystem};
+
+use crate::storage::{StorageManager, FileLen, FileSystem};
 
 struct Context {
     file_metadata: FileMetadata,

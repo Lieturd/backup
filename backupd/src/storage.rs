@@ -61,11 +61,11 @@ pub struct InMemoryStorage {
 impl<'a> StorageManager<'a> for InMemoryStorage {
     type File = Cursor<&'a mut Vec<u8>>;
 
-    fn create_storage(&self, path: String) -> Result<Self::File, String> {
+    fn create_storage(&self, _path: String) -> Result<Self::File, String> {
         unimplemented!()
     }
 
-    fn open_storage(&self, path: String) -> Result<Self::File, String> {
+    fn open_storage(&self, _path: String) -> Result<Self::File, String> {
         unimplemented!()
     }
 }

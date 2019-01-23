@@ -1,4 +1,5 @@
 mod server;
+mod storage;
 mod configuration;
 
 use std::env;

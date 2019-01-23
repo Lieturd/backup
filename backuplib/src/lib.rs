@@ -1,6 +1,5 @@
 pub mod client;
 pub mod rpc;
-pub mod storage;
 mod proto;
 
 pub use grpc;
