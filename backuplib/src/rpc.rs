@@ -1,5 +1,6 @@
 use crate::proto::baacup;
 use crate::proto::baacup_grpc;
+pub use crate::proto::baacup_grpc::BaacupServer;
 
 pub struct FileMetadata {
     pub file_name: String,

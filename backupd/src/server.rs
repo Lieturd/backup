@@ -3,9 +3,8 @@ use std::path::PathBuf;
 use std::io::{Seek, Write, SeekFrom};
 use std::collections::HashMap;
 
-use crate::rpc::*;
-use crate::storage::{StorageManager, FileLen, FileSystem};
-pub use crate::proto::baacup_grpc::BaacupServer;
+use backuplib::rpc::*;
+use backuplib::storage::{StorageManager, FileLen, FileSystem};
 
 struct Context {
     file_metadata: FileMetadata,

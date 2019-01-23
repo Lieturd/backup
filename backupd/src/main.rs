@@ -1,11 +1,12 @@
+mod server;
 mod configuration;
 
 use std::env;
 use std::thread;
 
-use backuplib::server::BaacupServer;
-use backuplib::server::BaacupImpl;
+use server::BaacupImpl;
 use backuplib::grpc::ServerBuilder;
+use backuplib::rpc::BaacupServer;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
