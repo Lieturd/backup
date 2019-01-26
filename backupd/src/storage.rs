@@ -1,7 +1,6 @@
 use std::fs::{File, OpenOptions};
-use std::io::{Read, Write, Seek, Cursor};
+use std::io::{Read, Write, Seek};
 use std::path::PathBuf;
-use std::collections::HashMap;
 
 pub trait FileLen {
     fn len(&self) -> Result<u64, String>;
@@ -17,8 +16,8 @@ impl FileLen for File {
 
 pub trait StorageManager<'a> {
     type File: Read + Write + Seek + FileLen + 'a;
-    fn create_storage(&self, path: String) -> Result<Self::File, String>;
-    fn open_storage(&self, path: String) -> Result<Self::File, String>;
+    fn create_storage(&'a self, path: String) -> Result<Self::File, String>;
+    fn open_storage(&'a self, path: String) -> Result<Self::File, String>;
 }
 
 #[derive(Debug, Clone)]
@@ -50,28 +49,5 @@ impl<'a> StorageManager<'a> for FileSystem {
             .write(true)
             .open(full_path)
             .map_err(|e| e.to_string())
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct InMemoryStorage {
-    map: HashMap<String, Vec<u8>>,
-}
-
-impl<'a> StorageManager<'a> for InMemoryStorage {
-    type File = Cursor<&'a mut Vec<u8>>;
-
-    fn create_storage(&self, _path: String) -> Result<Self::File, String> {
-        unimplemented!()
-    }
-
-    fn open_storage(&self, _path: String) -> Result<Self::File, String> {
-        unimplemented!()
-    }
-}
-
-impl<'a> FileLen for Cursor<&'a mut Vec<u8>> {
-    fn len(&self) -> Result<u64, String> {
-        unimplemented!()
     }
 }

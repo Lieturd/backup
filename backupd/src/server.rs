@@ -25,20 +25,27 @@ pub struct BaacupImpl<S> {
     storage: S,
 }
 
-impl BaacupImpl<FileSystem> {
-    pub fn new<P>(path: P) -> BaacupImpl<FileSystem>
-        where P: Into<PathBuf>,
-    {
+impl<S> BaacupImpl<S> {
+    pub fn new_from_storage(storage_manager: S) -> BaacupImpl<S> {
         BaacupImpl {
             next_token_mutex: Arc::new(Mutex::new(0)),
             token_map_mutex: Arc::new(Mutex::new(HashMap::new())),
-            storage: FileSystem::new(path),
+            storage: storage_manager,
         }
     }
 }
 
-impl<'a, S> Baacup for BaacupImpl<S>
-    where S: StorageManager<'a>
+impl BaacupImpl<FileSystem> {
+    pub fn new_from_path<P>(path: P) -> BaacupImpl<FileSystem>
+        where P: Into<PathBuf>,
+    {
+        let fs = FileSystem::new(path);
+        Self::new_from_storage(fs)
+    }
+}
+
+impl<S> Baacup for BaacupImpl<S>
+    where for<'a> S: StorageManager<'a>,
 {
     fn init_upload(&self, metadata: FileMetadata) -> Result<u32, String> {
         let _file = self.storage.create_storage(metadata.file_name.clone())
