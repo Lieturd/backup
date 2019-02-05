@@ -1,10 +1,13 @@
 use std::env;
 use std::io::{Read, Seek, SeekFrom};
 use std::fs::File;
+use std::sync::Arc;
 
 use backuplib::grpc::ClientStubExt;
 use backuplib::rpc::*;
 use backuplib::client::BaacupClient;
+use futures::Future;
+use futures::future::{self, Loop, Either};
 
 mod configuration;
 
@@ -16,12 +19,18 @@ fn main() {
 
     let filename = env::args().skip(1).next().unwrap();
 
+    tokio::run(upload_file(filename)
+        .map_err(|err| println!("Error: {}", err)));
+}
+
+fn upload_file(filename: String) -> impl Future<Item = (), Error = String> {
     // Open file
-    let mut file = File::open(&filename).unwrap();
+    let file = File::open(&filename).unwrap();
     let file_size = file.metadata().unwrap().len();
 
     // Make client
     let client = BaacupClient::new_plain("127.0.0.1", 8000, Default::default()).unwrap();
+    let client = Arc::new(client);
 
     // Get a token
     let file_data = FileMetadata {
@@ -29,41 +38,40 @@ fn main() {
         last_modified: 0,
         file_size: file_size,
     };
-    let token = client.init_upload(file_data).unwrap();
+    client.init_upload(file_data)
+        .and_then(move |token| {
+            future::loop_fn((file, client), move |(mut file, client)| {
+                // Get file head
+                client.get_head(token)
+                    .and_then(move |offset| {
+                        // Read from file
+                        let mut buffer = [0; 1024];
+                        file.seek(SeekFrom::Start(offset)).unwrap();
+                        let bytes = file.read(&mut buffer).unwrap();
+                        if bytes == 0 {
+                            return Either::A(future::ok(Loop::Break(())));
+                        }
+                        let buffer_vec = buffer[..bytes].to_vec();
 
-    loop {
-        // Get file head
-        let offset = match client.get_head(token) {
-            Ok(offset) => offset,
-            Err(error) => {
-                println!("Error: {}", error);
-                break;
-            }
-        };
+                        // Upload data
+                        let file_chunk = FileChunk {
+                            token: token,
+                            offset: offset,
+                            data: buffer_vec,
+                        };
+                        Either::B(client.upload_chunk(file_chunk)
+                            .and_then(move |checksum| {
+                                if checksum != 0 {
+                                    panic!("Bad upload_resp");
+                                }
 
-        // Read from file
-        let mut buffer = [0; 1024];
-        file.seek(SeekFrom::Start(offset)).unwrap();
-        let bytes = file.read(&mut buffer).unwrap();
-        if bytes == 0 {
-            break;
-        }
-        let buffer_vec = buffer[..bytes].to_vec();
-
-        // Upload data
-        let file_chunk = FileChunk {
-            token: token,
-            offset: offset,
-            data: buffer_vec,
-        };
-        let checksum = client.upload_chunk(file_chunk).unwrap();
-        if checksum != 0 {
-            panic!("Bad upload_resp");
-        }
-
-        // Check if we've finished uploading.
-        if bytes as u64 + offset == file_size {
-            break;
-        }
-    }
+                                // Check if we've finished uploading.
+                                if bytes as u64 + offset == file_size {
+                                    return Ok(Loop::Break(()));
+                                }
+                                Ok(Loop::Continue((file, client)))
+                            }))
+                    })
+            })
+        })
 }
