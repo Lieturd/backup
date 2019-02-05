@@ -5,6 +5,7 @@ use std::sync::{Arc, Mutex};
 
 use backupd::storage::{StorageManager, FileLen};
 use backupd::server::BaacupImpl;
+use futures::future::{self, Future, Loop, Either};
 
 use backuplib::rpc::{Baacup, FileMetadata, FileChunk};
 
@@ -105,19 +106,27 @@ fn test_unique_tokens() {
     // Make a new server from the manager
     let server = BaacupImpl::new_from_storage(storage_manager.clone());
 
-    let mut token_set = HashSet::new();
-    for i in 0..10000 {
-        // Upload generated file to server
-        let metadata = FileMetadata {
-            file_name: format!("file_{}", i),
-            last_modified: 0,
-            file_size: 1,
-        };
-        let token = server.init_upload(metadata).unwrap();
-
-        assert!(!token_set.contains(&token));
-        token_set.insert(token);
-    }
+    let token_set = HashSet::new();
+    let fut = future::loop_fn((server, token_set, 0), move |(server, mut token_set, count)| {
+        if count == 10000 {
+            Either::A(future::ok(Loop::Break(())))
+        }
+        else {
+            // Upload generated file to server
+            let metadata = FileMetadata {
+                file_name: format!("file_{}", count),
+                last_modified: 0,
+                file_size: 1,
+            };
+            Either::B(server.init_upload(metadata)
+                .and_then(move |token| {
+                    assert!(!token_set.contains(&token));
+                    token_set.insert(token);
+                    Ok(Loop::Continue((server, token_set, count + 1)))
+                }))
+        }
+    });
+    tokio::run(fut.map_err(|err| panic!("Error: {}", err)));
 }
 
 #[test]
@@ -134,36 +143,42 @@ fn test_file_upload() {
         last_modified: 0,
         file_size: 2048,
     };
-    let token = server.init_upload(metadata).unwrap();
-    let offset = server.get_head(token).unwrap();
-    assert_eq!(offset, 0);
-    let chunk = FileChunk {
-        token: token,
-        offset: offset,
-        data: (0..1024).map(|n| (n % 256) as u8).collect(),
-    };
-    let _checksum = server.upload_chunk(chunk).unwrap();
-    let offset = server.get_head(token).unwrap();
-    assert_eq!(offset, 1024);
-    let chunk = FileChunk {
-        token: token,
-        offset: offset,
-        data: (0..1024).map(|n| (n % 256) as u8).collect(),
-    };
-    let _checksum = server.upload_chunk(chunk).unwrap();
+    let fut = server.init_upload(metadata).and_then(move |token| {
+        server.get_head(token).and_then(move |offset| {
+            assert_eq!(offset, 0);
+            let chunk = FileChunk {
+                token: token,
+                offset: offset,
+                data: (0..1024).map(|n| (n % 256) as u8).collect(),
+            };
+            server.upload_chunk(chunk).and_then(move |_checksum| {
+                server.get_head(token).and_then(move |offset| {
+                    assert_eq!(offset, 1024);
+                    let chunk = FileChunk {
+                        token: token,
+                        offset: offset,
+                        data: (0..1024).map(|n| (n % 256) as u8).collect(),
+                    };
+                    server.upload_chunk(chunk).and_then(move |_checksum| {
+                        // Get file from storage manager
+                        let mut file = storage_manager.open_storage("test_file".into()).unwrap();
+                        let mut buf = Vec::new();
 
-    // Get file from storage manager
-    let mut file = storage_manager.open_storage("test_file".into()).unwrap();
-    let mut buf = Vec::new();
+                        // Read file
+                        file.read_to_end(&mut buf).unwrap();
 
-    // Read file
-    file.read_to_end(&mut buf).unwrap();
+                        // Was it the right length?
+                        assert_eq!(buf.len(), 2048);
 
-    // Was it the right length?
-    assert_eq!(buf.len(), 2048);
-
-    // Does it have the right contents?
-    for (idx, byte) in buf.iter().enumerate() {
-        assert_eq!(*byte, (idx % 256) as u8);
-    }
+                        // Does it have the right contents?
+                        for (idx, byte) in buf.iter().enumerate() {
+                            assert_eq!(*byte, (idx % 256) as u8);
+                        }
+                        Ok(())
+                    })
+                })
+            })
+        })
+    });
+    tokio::run(fut.map_err(|err| panic!("Error: {}", err)));
 }
