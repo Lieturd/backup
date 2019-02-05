@@ -75,6 +75,9 @@ impl Read for InMemoryFile {
 impl Write for InMemoryFile {
     fn write(&mut self, buf: &[u8]) -> IoResult<usize> {
         let mut file = self.file_mutex.lock().unwrap();
+        if self.position != file.len() as u64 {
+            panic!("Cannot write while in the middle of file");
+        }
         file.extend_from_slice(buf);
         self.position += buf.len() as u64;
         Ok(buf.len())
