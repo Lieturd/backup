@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+service Baacup {
+  rpc InitUpload (FileMetadata) returns (InitUploadResponse) {}
+  rpc GetHead (UploadToken) returns (FileHead) {}
+  rpc UploadChunk (FileChunk) returns (UploadFileResponse) {}
+  rpc FileIsUploaded (FileMetadata) returns (FileIsUploadedResponse) {}
+}
+
+enum Status {
+    SUCCESS = 0;
+    ERROR = 1;
+}
+
+message FileMetadata {
+    string file_name = 1;
+    uint32 last_modified = 2;
+    uint64 file_size = 3;
+}
+
+message UploadToken {
+    uint32 token = 1;
+}
+
+message InitUploadResponse {
+    Status status = 1;
+    UploadToken token = 2;
+    string error_message = 3;
+}
+
+message FileHead {
+    Status status = 1;
+    uint64 offset = 2;
+    string error_message = 3;
+}
+
+message FileChunk {
+    uint32 token = 1;
+    uint64 offset = 2;
+    bytes data = 3;
+}
+
+message UploadFileResponse {
+    Status status = 1;
+    uint32 checksum = 2;
+    string error_message = 3;
+}
+
+message FileIsUploadedResponse {
+    Status status = 1;
+    bool file_is_uploaded = 2;
+    string error_message = 3;
+}

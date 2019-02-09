@@ -1,3 +1,9 @@
+pub mod client;
+pub mod rpc;
+mod proto;
+
+pub use grpc;
+
 pub const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
 pub fn print_hello() {
