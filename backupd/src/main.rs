@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate diesel;
+
 mod server;
 mod storage;
 mod configuration;

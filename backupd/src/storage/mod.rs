@@ -1,3 +1,5 @@
+pub mod sqlite_db;
+
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write, Seek};
 use std::path::PathBuf;
