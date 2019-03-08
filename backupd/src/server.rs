@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use backuplib::rpc::*;
 
 use crate::storage::{StorageManager, FileLen, FileSystem};
+use crate::storage::sqlite_db::SqliteStorageManager;
 
 macro_rules! try_future {
     ($x:expr) => {
@@ -49,6 +50,13 @@ impl BaacupImpl<FileSystem> {
         where P: Into<PathBuf>,
     {
         let fs = FileSystem::new(path);
+        Self::new_from_storage(fs)
+    }
+}
+
+impl BaacupImpl<SqliteStorageManager> {
+    pub fn new_from_db_path(path: &str) -> BaacupImpl<SqliteStorageManager> {
+        let fs = SqliteStorageManager::new(path);
         Self::new_from_storage(fs)
     }
 }
