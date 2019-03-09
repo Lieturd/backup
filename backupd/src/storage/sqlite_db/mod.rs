@@ -32,29 +32,50 @@ impl<'a> StorageManager<'a> for SqliteStorageManager {
     fn create_storage(&'a self, path: String) -> Result<Self::File, String> {
         let local_filename = Uuid::new_v4().to_simple().to_string();
 
-        let file = File::create(&local_filename).unwrap();
-
-        let new_file = DbFile {
-            real_filename: path,
-            local_filename: local_filename,
-            last_updated: 0,
-        };
-
         let connection = self.connection.lock().unwrap();
-        diesel::insert_into(files::table)
-            .values(&new_file)
-            .execute(&*connection)
-            .unwrap();
+        let file_row_result = files::table.find(&path)
+            .first::<DbFile>(&*connection);
 
-        Ok(file)
+        match file_row_result {
+            Ok(file_row) => {
+                OpenOptions::new()
+                    .write(true)
+                    .create(true)
+                    .truncate(true)
+                    .open(file_row.local_filename)
+                    .map_err(|e| e.to_string())
+            }
+            Err(_) => {
+                let file = OpenOptions::new()
+                    .write(true)
+                    .create(true)
+                    .truncate(true)
+                    .open(&local_filename)
+                    .map_err(|e| e.to_string())?;
+
+                let new_file = DbFile {
+                    real_filename: path,
+                    local_filename: local_filename,
+                    last_updated: 0,
+                };
+
+                diesel::insert_into(files::table)
+                    .values(&new_file)
+                    .execute(&*connection)
+                    .map_err(|e| e.to_string())?;
+
+                Ok(file)
+            }
+        }
     }
 
     fn open_storage(&'a self, path: String) -> Result<Self::File, String> {
-        println!("Opening storage");
         let connection = self.connection.lock().unwrap();
+
         let file_row = files::table.find(path)
             .first::<DbFile>(&*connection)
             .unwrap();
+
         OpenOptions::new()
             .write(true)
             .open(file_row.local_filename)
