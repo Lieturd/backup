@@ -12,3 +12,4 @@ serde_yaml = "0.8"
 futures = "0.1"
 tokio = "0.1"
 diesel = { version = "1.4", features = ["sqlite"] }
+uuid = { version = "0.7", features = ["v4"] }

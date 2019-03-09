@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex};
 use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
 use diesel::{Connection, RunQueryDsl};
+use uuid::Uuid;
 
 use crate::storage::StorageManager;
 use crate::storage::sqlite_db::model::DbFile;
@@ -29,15 +30,15 @@ impl<'a> StorageManager<'a> for SqliteStorageManager {
     type File = File;
 
     fn create_storage(&'a self, path: String) -> Result<Self::File, String> {
-        let local_filename = "test.bin";
+        let local_filename = Uuid::new_v4().to_simple().to_string();
+
+        let file = File::create(&local_filename).unwrap();
 
         let new_file = DbFile {
             real_filename: path,
-            local_filename: local_filename.into(),
+            local_filename: local_filename,
             last_updated: 0,
         };
-
-        let file = File::create(local_filename).unwrap();
 
         let connection = self.connection.lock().unwrap();
         diesel::insert_into(files::table)
