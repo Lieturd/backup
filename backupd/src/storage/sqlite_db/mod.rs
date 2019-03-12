@@ -39,6 +39,11 @@ impl<'a> StorageManager<'a> for SqliteStorageManager {
 
         match file_row_result {
             Ok(file_row) => {
+                diesel::update(&file_row)
+                    .set(files::last_updated.eq(metadata.last_modified as i64))
+                    .execute(&*connection)
+                    .map_err(|e| e.to_string())?;
+
                 OpenOptions::new()
                     .write(true)
                     .create(true)

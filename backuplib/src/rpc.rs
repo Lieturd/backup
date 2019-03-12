@@ -129,7 +129,30 @@ impl<T> baacup_grpc::Baacup for T
         )
     }
 
-    fn file_is_uploaded(&self, _o: grpc::RequestOptions, _p: baacup::FileMetadata) -> grpc::SingleResponse<baacup::FileIsUploadedResponse> {
-        unimplemented!()
+    fn file_is_uploaded(&self, _o: grpc::RequestOptions, mut p: baacup::FileMetadata) -> grpc::SingleResponse<baacup::FileIsUploadedResponse> {
+        let metadata = FileMetadata {
+            file_name: p.take_file_name(),
+            last_modified: p.get_last_modified(),
+            file_size: p.get_file_size(),
+        };
+
+        grpc::SingleResponse::no_metadata(Baacup::file_is_uploaded(self, metadata)
+            .then(|future_result| {
+                match future_result {
+                    Ok(is_uploaded) => {
+                        let mut file_is_uploaded_response = baacup::FileIsUploadedResponse::new();
+                        file_is_uploaded_response.set_status(baacup::Status::SUCCESS);
+                        file_is_uploaded_response.set_file_is_uploaded(is_uploaded);
+                        Ok(file_is_uploaded_response)
+                    }
+                    Err(error) => {
+                        let mut file_is_uploaded_response = baacup::FileIsUploadedResponse::new();
+                        file_is_uploaded_response.set_status(baacup::Status::ERROR);
+                        file_is_uploaded_response.set_error_message(error);
+                        Ok(file_is_uploaded_response)
+                    }
+                }
+            })
+        )
     }
 }

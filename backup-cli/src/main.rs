@@ -45,40 +45,50 @@ fn upload_file(filename: String) -> impl Future<Item = (), Error = String> {
         last_modified: modified as u32,
         file_size: file_size,
     };
-    client.init_upload(file_data)
-        .and_then(move |token| {
-            future::loop_fn((file, client), move |(mut file, client)| {
-                // Get file head
-                client.get_head(token)
-                    .and_then(move |offset| {
-                        // Read from file
-                        let mut buffer = [0; 1024];
-                        file.seek(SeekFrom::Start(offset)).unwrap();
-                        let bytes = file.read(&mut buffer).unwrap();
-                        if bytes == 0 {
-                            return Either::A(future::ok(Loop::Break(())));
-                        }
-                        let buffer_vec = buffer[..bytes].to_vec();
+    client.file_is_uploaded(file_data.clone())
+        .and_then(move |is_uploaded| {
+            if !is_uploaded {
+                Either::A(
+                    client.init_upload(file_data)
+                        .and_then(move |token| {
+                            future::loop_fn((file, client), move |(mut file, client)| {
+                                // Get file head
+                                client.get_head(token)
+                                    .and_then(move |offset| {
+                                        // Read from file
+                                        let mut buffer = [0; 1024];
+                                        file.seek(SeekFrom::Start(offset)).unwrap();
+                                        let bytes = file.read(&mut buffer).unwrap();
+                                        if bytes == 0 {
+                                            return Either::A(future::ok(Loop::Break(())));
+                                        }
+                                        let buffer_vec = buffer[..bytes].to_vec();
 
-                        // Upload data
-                        let file_chunk = FileChunk {
-                            token: token,
-                            offset: offset,
-                            data: buffer_vec,
-                        };
-                        Either::B(client.upload_chunk(file_chunk)
-                            .and_then(move |checksum| {
-                                if checksum != 0 {
-                                    panic!("Bad upload_resp");
-                                }
+                                        // Upload data
+                                        let file_chunk = FileChunk {
+                                            token: token,
+                                            offset: offset,
+                                            data: buffer_vec,
+                                        };
+                                        Either::B(client.upload_chunk(file_chunk)
+                                            .and_then(move |checksum| {
+                                                if checksum != 0 {
+                                                    panic!("Bad upload_resp");
+                                                }
 
-                                // Check if we've finished uploading.
-                                if bytes as u64 + offset == file_size {
-                                    return Ok(Loop::Break(()));
-                                }
-                                Ok(Loop::Continue((file, client)))
-                            }))
-                    })
-            })
+                                                // Check if we've finished uploading.
+                                                if bytes as u64 + offset == file_size {
+                                                    return Ok(Loop::Break(()));
+                                                }
+                                                Ok(Loop::Continue((file, client)))
+                                            }))
+                                    })
+                            })
+                        })
+                )
+            }
+            else {
+                Either::B(future::err("file is up to date".into()))
+            }
         })
 }

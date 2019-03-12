@@ -70,7 +70,22 @@ impl Baacup for BaacupClient {
         )
     }
 
-    fn file_is_uploaded(&self, _p: FileMetadata) -> BaacupFuture<bool> {
-        unimplemented!()
+    fn file_is_uploaded(&self, metadata: FileMetadata) -> BaacupFuture<bool> {
+        let mut file_metadata = baacup::FileMetadata::new();
+        file_metadata.set_file_name(metadata.file_name.into());
+        file_metadata.set_last_modified(metadata.last_modified);
+        file_metadata.set_file_size(metadata.file_size);
+
+        let is_uploaded_resp = self.0.file_is_uploaded(RequestOptions::new(), file_metadata);
+        BaacupFuture::new(is_uploaded_resp.drop_metadata()
+            .then(|is_uploaded_result|
+                is_uploaded_result.map_err(|e| e.to_string()).and_then(|mut is_uploaded|
+                    match is_uploaded.get_status() {
+                        baacup::Status::SUCCESS => Ok(is_uploaded.get_file_is_uploaded()),
+                        baacup::Status::ERROR => Err(is_uploaded.take_error_message()),
+                    }
+                )
+            )
+        )
     }
 }
