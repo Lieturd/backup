@@ -8,6 +8,7 @@ use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
 use diesel::{Connection, RunQueryDsl};
 use uuid::Uuid;
+use backuplib::rpc::FileMetadata;
 
 use crate::storage::StorageManager;
 use crate::storage::sqlite_db::model::DbFile;
@@ -29,11 +30,11 @@ impl SqliteStorageManager {
 impl<'a> StorageManager<'a> for SqliteStorageManager {
     type File = File;
 
-    fn create_storage(&'a self, path: String) -> Result<Self::File, String> {
+    fn create_storage(&'a self, metadata: &FileMetadata) -> Result<Self::File, String> {
         let local_filename = Uuid::new_v4().to_simple().to_string();
 
         let connection = self.connection.lock().unwrap();
-        let file_row_result = files::table.find(&path)
+        let file_row_result = files::table.find(&metadata.file_name)
             .first::<DbFile>(&*connection);
 
         match file_row_result {
@@ -54,9 +55,9 @@ impl<'a> StorageManager<'a> for SqliteStorageManager {
                     .map_err(|e| e.to_string())?;
 
                 let new_file = DbFile {
-                    real_filename: path,
+                    real_filename: metadata.file_name.clone(),
                     local_filename: local_filename,
-                    last_updated: 0,
+                    last_updated: metadata.last_modified as i64,
                 };
 
                 diesel::insert_into(files::table)

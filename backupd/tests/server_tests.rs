@@ -25,11 +25,11 @@ impl InMemoryStorage {
 impl<'a> StorageManager<'a> for InMemoryStorage {
     type File = InMemoryFile;
 
-    fn create_storage(&'a self, path: String) -> Result<InMemoryFile, String> {
+    fn create_storage(&'a self, metadata: &FileMetadata) -> Result<InMemoryFile, String> {
         let data = Vec::new();
         let mut map = self.map_mutex.lock().unwrap();
-        map.insert(path.clone(), Arc::new(Mutex::new(data)));
-        map.get_mut(&path)
+        map.insert(metadata.file_name.clone(), Arc::new(Mutex::new(data)));
+        map.get_mut(&metadata.file_name)
             .map(|d| InMemoryFile::new(d.clone()))
             .ok_or("Unreachable".into())
     }

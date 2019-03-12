@@ -65,7 +65,7 @@ impl<S> Baacup for BaacupImpl<S>
     where for<'a> S: StorageManager<'a>,
 {
     fn init_upload(&self, metadata: FileMetadata) -> BaacupFuture<u32> {
-        let _file = try_future!(self.storage.create_storage(metadata.file_name.clone())
+        let _file = try_future!(self.storage.create_storage(&metadata)
             .map_err(|e| e.to_string()));
 
         // Get a token and increment token counter
