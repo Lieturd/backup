@@ -128,7 +128,7 @@ impl<S> Baacup for BaacupImpl<S>
         BaacupFuture::new(Ok(0))
     }
 
-    fn file_is_uploaded(&self, _metadata: FileMetadata) -> BaacupFuture<bool> {
-        unimplemented!()
+    fn file_is_uploaded(&self, metadata: FileMetadata) -> BaacupFuture<bool> {
+        BaacupFuture::new(self.storage.storage_outdated(&metadata).map(|b| !b))
     }
 }
