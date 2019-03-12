@@ -4,12 +4,14 @@ use crate::proto::baacup;
 use crate::proto::baacup_grpc;
 pub use crate::proto::baacup_grpc::BaacupServer;
 
+#[derive(Clone, Debug)]
 pub struct FileMetadata {
     pub file_name: String,
     pub last_modified: u32,
     pub file_size: u64,
 }
 
+#[derive(Clone, Debug)]
 pub struct FileChunk {
     pub token: u32,
     pub offset: u64,
