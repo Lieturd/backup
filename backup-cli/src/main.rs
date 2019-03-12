@@ -2,6 +2,7 @@ use std::env;
 use std::io::{Read, Seek, SeekFrom};
 use std::fs::File;
 use std::sync::Arc;
+use std::time::SystemTime;
 
 use backuplib::grpc::ClientStubExt;
 use backuplib::rpc::*;
@@ -27,7 +28,11 @@ fn main() {
 fn upload_file(filename: String) -> impl Future<Item = (), Error = String> {
     // Open file
     let file = File::open(&filename).unwrap();
-    let file_size = file.metadata().unwrap().len();
+    let metadata = file.metadata().unwrap();
+    let file_size = metadata.len();
+    let modified = metadata.modified().unwrap()
+        .duration_since(SystemTime::UNIX_EPOCH).unwrap()
+        .as_secs();
 
     // Make client
     let client = BaacupClient::new_plain("127.0.0.1", 8000, Default::default()).unwrap();
@@ -36,7 +41,8 @@ fn upload_file(filename: String) -> impl Future<Item = (), Error = String> {
     // Get a token
     let file_data = FileMetadata {
         file_name: filename.into(),
-        last_modified: 0,
+        // TODO: Make last_modified a u64 instead
+        last_modified: modified as u32,
         file_size: file_size,
     };
     client.init_upload(file_data)
