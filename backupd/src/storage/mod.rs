@@ -22,6 +22,7 @@ pub trait StorageManager<'a> {
     type File: Read + Write + Seek + FileLen + 'a;
     fn create_storage(&'a self, metadata: &FileMetadata) -> Result<Self::File, String>;
     fn open_storage(&'a self, path: String) -> Result<Self::File, String>;
+    fn storage_outdated(&'a self, metadata: &FileMetadata) -> Result<bool, String>;
 }
 
 #[derive(Debug, Clone)]
@@ -53,5 +54,10 @@ impl<'a> StorageManager<'a> for FileSystem {
             .write(true)
             .open(full_path)
             .map_err(|e| e.to_string())
+    }
+
+    fn storage_outdated(&'a self, metadata: &FileMetadata) -> Result<bool, String> {
+        // Dummy implementation
+        Ok(true)
     }
 }

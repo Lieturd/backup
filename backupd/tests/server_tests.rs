@@ -40,6 +40,11 @@ impl<'a> StorageManager<'a> for InMemoryStorage {
             .map(|d| InMemoryFile::new(d.clone()))
             .ok_or("Unreachable".into())
     }
+
+    fn storage_outdated(&'a self, metadata: &FileMetadata) -> Result<bool, String> {
+        // Dummy implementation
+        Ok(true)
+    }
 }
 
 pub struct InMemoryFile {

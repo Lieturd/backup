@@ -82,4 +82,15 @@ impl<'a> StorageManager<'a> for SqliteStorageManager {
             .open(file_row.local_filename)
             .map_err(|e| e.to_string())
     }
+
+    fn storage_outdated(&'a self, metadata: &FileMetadata) -> Result<bool, String> {
+        let connection = self.connection.lock().unwrap();
+
+        let file_is_updated = files::table.find(&metadata.file_name)
+            .filter(files::last_updated.eq(metadata.last_modified as i64))
+            .first::<DbFile>(&*connection)
+            .is_ok();
+
+        Ok(!file_is_updated)
+    }
 }
