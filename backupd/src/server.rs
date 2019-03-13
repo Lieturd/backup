@@ -7,6 +7,15 @@ use backuplib::rpc::*;
 
 use crate::storage::{StorageManager, FileLen, FileSystem};
 
+macro_rules! try_future {
+    ($x:expr) => {
+        match $x {
+            Ok(val) => val,
+            Err(err) => return BaacupFuture::new(Err(err)),
+        }
+    };
+}
+
 struct Context {
     file_metadata: FileMetadata,
 }
@@ -47,9 +56,9 @@ impl BaacupImpl<FileSystem> {
 impl<S> Baacup for BaacupImpl<S>
     where for<'a> S: StorageManager<'a>,
 {
-    fn init_upload(&self, metadata: FileMetadata) -> Result<u32, String> {
-        let _file = self.storage.create_storage(metadata.file_name.clone())
-            .map_err(|e| e.to_string())?;
+    fn init_upload(&self, metadata: FileMetadata) -> BaacupFuture<u32> {
+        let _file = try_future!(self.storage.create_storage(metadata.file_name.clone())
+            .map_err(|e| e.to_string()));
 
         // Get a token and increment token counter
         // (Bad for security)
@@ -62,40 +71,42 @@ impl<S> Baacup for BaacupImpl<S>
         let mut token_map = self.token_map_mutex.lock().unwrap();
         token_map.insert(token, context);
 
-        Ok(token)
+        BaacupFuture::new(Ok(token))
     }
 
-    fn get_head(&self, token: u32) -> Result<u64, String> {
+    fn get_head(&self, token: u32) -> BaacupFuture<u64> {
         // Get path from map
         let token_map = self.token_map_mutex.lock().unwrap();
-        let context = token_map.get(&token)
-            .ok_or("Invalid token".to_string())?;
+        let context = try_future!(token_map.get(&token)
+            .ok_or("Invalid token".to_string()));
 
         // Get file length
-        let len = self.storage.open_storage(context.file_metadata.file_name.clone())?.len()?;
-        Ok(len)
+        BaacupFuture::new(self.storage
+            .open_storage(context.file_metadata.file_name.clone())
+            .and_then(|storage| storage.len())
+            .map_err(|e| e.to_string()))
     }
 
-    fn upload_chunk(&self, chunk: FileChunk) -> Result<u32, String> {
+    fn upload_chunk(&self, chunk: FileChunk) -> BaacupFuture<u32> {
         println!("Got chunk with token {} offset {} data.len() {}", chunk.token, chunk.offset, chunk.data.len());
 
         // Get file
         let mut token_map = self.token_map_mutex.lock().unwrap();
-        let context = token_map.get(&chunk.token)
-            .ok_or("Invalid token".to_string())?;
-        let mut file = self.storage.open_storage(context.file_metadata.file_name.clone())?;
+        let context = try_future!(token_map.get(&chunk.token)
+            .ok_or("Invalid token".to_string()));
+        let mut file = try_future!(self.storage.open_storage(context.file_metadata.file_name.clone()));
 
         // Double-check len
-        let file_len = file.len()?;
+        let file_len = try_future!(file.len());
         if file_len != chunk.offset {
-            return Err("Bad offset".to_string());
+            return BaacupFuture::new(Err("Bad offset".to_string()));
         }
 
         // Write data
-        file.seek(SeekFrom::Start(chunk.offset))
-            .map_err(|e| e.to_string())?;
-        file.write_all(&chunk.data)
-            .map_err(|e| e.to_string())?;
+        try_future!(file.seek(SeekFrom::Start(chunk.offset))
+            .map_err(|e| e.to_string()));
+        try_future!(file.write_all(&chunk.data)
+            .map_err(|e| e.to_string()));
 
         // Check if we're done
         println!("{} {}", chunk.offset + chunk.data.len() as u64, context.file_metadata.file_size);
@@ -106,10 +117,10 @@ impl<S> Baacup for BaacupImpl<S>
 
         // Return checksum
         // TODO: Actually return checksum
-        Ok(0)
+        BaacupFuture::new(Ok(0))
     }
 
-    fn file_is_uploaded(&self, _metadata: FileMetadata) -> Result<bool, String> {
+    fn file_is_uploaded(&self, _metadata: FileMetadata) -> BaacupFuture<bool> {
         unimplemented!()
     }
 }
