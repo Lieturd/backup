@@ -10,6 +10,7 @@ use futures::Future;
 use futures::future::{self, Loop, Either};
 
 mod configuration;
+mod file_scanner;
 
 const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 

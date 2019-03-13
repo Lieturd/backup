@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use serde_derive::Deserialize;
 
-mod yaml_reader;
+pub mod yaml_reader;
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct Configuration {
