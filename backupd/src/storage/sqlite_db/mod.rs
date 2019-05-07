@@ -3,6 +3,7 @@ mod schema;
 
 use std::fs::{File, OpenOptions};
 use std::sync::{Arc, Mutex};
+use std::io::Write;
 
 use diesel::prelude::*;
 use diesel::sqlite::SqliteConnection;
@@ -28,9 +29,7 @@ impl SqliteStorageManager {
 }
 
 impl<'a> StorageManager<'a> for SqliteStorageManager {
-    type File = File;
-
-    fn create_storage(&'a self, metadata: &FileMetadata) -> Result<Self::File, String> {
+    fn create(&'a self, metadata: &FileMetadata) -> Result<(), String> {
         let local_filename = Uuid::new_v4().to_simple().to_string();
 
         let connection = self.connection.lock().unwrap();
@@ -49,7 +48,9 @@ impl<'a> StorageManager<'a> for SqliteStorageManager {
                     .create(true)
                     .truncate(true)
                     .open(file_row.local_filename)
-                    .map_err(|e| e.to_string())
+                    .map_err(|e| e.to_string())?;
+
+                Ok(())
             }
             Err(_) => {
                 let file = OpenOptions::new()
@@ -70,21 +71,24 @@ impl<'a> StorageManager<'a> for SqliteStorageManager {
                     .execute(&*connection)
                     .map_err(|e| e.to_string())?;
 
-                Ok(file)
+                Ok(())
             }
         }
     }
 
-    fn open_storage(&'a self, path: String) -> Result<Self::File, String> {
+    fn append(&'a self, metadata: &FileMetadata, data: &[u8]) -> Result<(), String> {
         let connection = self.connection.lock().unwrap();
 
-        let file_row = files::table.find(path)
+        let file_row = files::table.find(&metadata.file_name)
             .first::<DbFile>(&*connection)
             .unwrap();
 
-        OpenOptions::new()
+        let mut file = OpenOptions::new()
             .write(true)
             .open(file_row.local_filename)
+            .map_err(|e| e.to_string())?;
+
+        file.write_all(data)
             .map_err(|e| e.to_string())
     }
 
@@ -97,5 +101,22 @@ impl<'a> StorageManager<'a> for SqliteStorageManager {
             .is_ok();
 
         Ok(!file_is_updated)
+    }
+
+    fn get_head(&'a self, metadata: &FileMetadata) -> Result<u64, String> {
+        let connection = self.connection.lock().unwrap();
+
+        let file_row = files::table.find(&metadata.file_name)
+            .first::<DbFile>(&*connection)
+            .unwrap();
+
+        let mut file = OpenOptions::new()
+            .read(true)
+            .open(file_row.local_filename)
+            .map_err(|e| e.to_string())?;
+
+        file.metadata()
+            .map_err(|e| e.to_string())
+            .map(|m| m.len())
     }
 }

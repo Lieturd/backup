@@ -65,7 +65,7 @@ impl<S> Baacup for BaacupImpl<S>
     where for<'a> S: StorageManager<'a>,
 {
     fn init_upload(&self, metadata: FileMetadata) -> BaacupFuture<u32> {
-        let _file = try_future!(self.storage.create_storage(&metadata)
+        try_future!(self.storage.create(&metadata)
             .map_err(|e| e.to_string()));
 
         // Get a token and increment token counter
@@ -90,30 +90,29 @@ impl<S> Baacup for BaacupImpl<S>
 
         // Get file length
         BaacupFuture::new(self.storage
-            .open_storage(context.file_metadata.file_name.clone())
-            .and_then(|storage| storage.len())
+            .get_head(&context.file_metadata)
             .map_err(|e| e.to_string()))
     }
 
     fn upload_chunk(&self, chunk: FileChunk) -> BaacupFuture<u32> {
         println!("Got chunk with token {} offset {} data.len() {}", chunk.token, chunk.offset, chunk.data.len());
 
-        // Get file
+        // Get metadata
         let mut token_map = self.token_map_mutex.lock().unwrap();
         let context = try_future!(token_map.get(&chunk.token)
             .ok_or("Invalid token".to_string()));
-        let mut file = try_future!(self.storage.open_storage(context.file_metadata.file_name.clone()));
 
         // Double-check len
-        let file_len = try_future!(file.len());
+        let file_len = try_future!(self.storage
+            .get_head(&context.file_metadata)
+            .map_err(|e| e.to_string()));
         if file_len != chunk.offset {
             return BaacupFuture::new(Err("Bad offset".to_string()));
         }
 
         // Write data
-        try_future!(file.seek(SeekFrom::Start(chunk.offset))
-            .map_err(|e| e.to_string()));
-        try_future!(file.write_all(&chunk.data)
+        try_future!(self.storage
+            .append(&context.file_metadata, &chunk.data)
             .map_err(|e| e.to_string()));
 
         // Check if we're done

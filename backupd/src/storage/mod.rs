@@ -19,10 +19,10 @@ impl FileLen for File {
 }
 
 pub trait StorageManager<'a> {
-    type File: Read + Write + Seek + FileLen + 'a;
-    fn create_storage(&'a self, metadata: &FileMetadata) -> Result<Self::File, String>;
-    fn open_storage(&'a self, path: String) -> Result<Self::File, String>;
+    fn create(&'a self, metadata: &FileMetadata) -> Result<(), String>;
+    fn append(&'a self, metadata: &FileMetadata, data: &[u8]) -> Result<(), String>;
     fn storage_outdated(&'a self, metadata: &FileMetadata) -> Result<bool, String>;
+    fn get_head(&'a self, metadata: &FileMetadata) -> Result<u64, String>;
 }
 
 #[derive(Debug, Clone)]
@@ -41,18 +41,19 @@ impl FileSystem {
 }
 
 impl<'a> StorageManager<'a> for FileSystem {
-    type File = File;
-
-    fn create_storage(&self, metadata: &FileMetadata) -> Result<Self::File, String> {
+    fn create(&self, metadata: &FileMetadata) -> Result<(), String> {
         let full_path = self.base_path.join(&metadata.file_name);
-        File::create(full_path).map_err(|e| e.to_string())
+        File::create(full_path).map_err(|e| e.to_string())?;
+        Ok(())
     }
 
-    fn open_storage(&self, path: String) -> Result<Self::File, String> {
-        let full_path = self.base_path.join(path);
-        OpenOptions::new()
+    fn append(&'a self, metadata: &FileMetadata, data: &[u8]) -> Result<(), String> {
+        let full_path = self.base_path.join(&metadata.file_name);
+        let mut file = OpenOptions::new()
             .write(true)
             .open(full_path)
+            .map_err(|e| e.to_string())?;
+        file.write_all(data)
             .map_err(|e| e.to_string())
     }
 
@@ -60,4 +61,9 @@ impl<'a> StorageManager<'a> for FileSystem {
         // Dummy implementation
         Ok(true)
     }
+
+    fn get_head(&'a self, metadata: &FileMetadata) -> Result<u64, String> {
+        unimplemented!()
+    }
 }
+
