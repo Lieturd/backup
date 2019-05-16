@@ -130,4 +130,8 @@ impl<S> Baacup for BaacupImpl<S>
     fn file_is_uploaded(&self, metadata: FileMetadata) -> BaacupFuture<bool> {
         BaacupFuture::new(self.storage.storage_outdated(&metadata).map(|b| !b))
     }
+
+    fn download_chunk(&self, metadata: FileMetadata, offset: u64) -> BaacupFuture<Vec<u8>> {
+        unimplemented!()
+    }
 }

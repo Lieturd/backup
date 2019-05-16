@@ -47,6 +47,7 @@ pub trait Baacup {
     fn get_head(&self, token: u32) -> BaacupFuture<u64>;
     fn upload_chunk(&self, chunk: FileChunk) -> BaacupFuture<u32>;
     fn file_is_uploaded(&self, metadata: FileMetadata) -> BaacupFuture<bool>;
+    fn download_chunk(&self, metadata: FileMetadata, offset: u64) -> BaacupFuture<Vec<u8>>;
 }
 
 impl<T> baacup_grpc::Baacup for T
@@ -150,6 +151,35 @@ impl<T> baacup_grpc::Baacup for T
                         file_is_uploaded_response.set_status(baacup::Status::ERROR);
                         file_is_uploaded_response.set_error_message(error);
                         Ok(file_is_uploaded_response)
+                    }
+                }
+            })
+        )
+    }
+
+    fn download_chunk(&self, _o: grpc::RequestOptions, mut p: baacup::DownloadChunkInfo) -> grpc::SingleResponse<baacup::DownloadChunkResponse> {
+        let offset = p.get_offset();
+        let mut sent_metadata = p.take_metadata();
+        let metadata = FileMetadata {
+            file_name: sent_metadata.take_file_name(),
+            last_modified: sent_metadata.get_last_modified(),
+            file_size: sent_metadata.get_file_size(),
+        };
+
+        grpc::SingleResponse::no_metadata(Baacup::download_chunk(self, metadata, offset)
+            .then(|future_result| {
+                match future_result {
+                    Ok(data) => {
+                        let mut download_chunk_response = baacup::DownloadChunkResponse::new();
+                        download_chunk_response.set_status(baacup::Status::SUCCESS);
+                        download_chunk_response.set_data(data);
+                        Ok(download_chunk_response)
+                    }
+                    Err(error) => {
+                        let mut download_chunk_response = baacup::DownloadChunkResponse::new();
+                        download_chunk_response.set_status(baacup::Status::ERROR);
+                        download_chunk_response.set_error_message(error);
+                        Ok(download_chunk_response)
                     }
                 }
             })

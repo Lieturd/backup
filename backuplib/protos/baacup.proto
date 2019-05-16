@@ -5,6 +5,7 @@ service Baacup {
   rpc GetHead (UploadToken) returns (FileHead) {}
   rpc UploadChunk (FileChunk) returns (UploadFileResponse) {}
   rpc FileIsUploaded (FileMetadata) returns (FileIsUploadedResponse) {}
+  rpc DownloadChunk (DownloadChunkInfo) returns (DownloadChunkResponse) {}
 }
 
 enum Status {
@@ -49,5 +50,16 @@ message UploadFileResponse {
 message FileIsUploadedResponse {
     Status status = 1;
     bool file_is_uploaded = 2;
+    string error_message = 3;
+}
+
+message DownloadChunkInfo {
+    FileMetadata metadata = 1;
+    uint64 offset = 2;
+}
+
+message DownloadChunkResponse {
+    Status status = 1;
+    bytes data = 2;
     string error_message = 3;
 }

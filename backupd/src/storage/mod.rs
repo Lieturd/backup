@@ -23,6 +23,7 @@ pub trait StorageManager<'a> {
     fn append(&'a self, metadata: &FileMetadata, data: &[u8]) -> Result<(), String>;
     fn storage_outdated(&'a self, metadata: &FileMetadata) -> Result<bool, String>;
     fn get_head(&'a self, metadata: &FileMetadata) -> Result<u64, String>;
+    fn get_chunk(&'a self, metadata: &FileMetadata, offset: u64) -> Result<Vec<u8>, String>;
 }
 
 #[derive(Debug, Clone)]
@@ -63,6 +64,10 @@ impl<'a> StorageManager<'a> for FileSystem {
     }
 
     fn get_head(&'a self, metadata: &FileMetadata) -> Result<u64, String> {
+        unimplemented!()
+    }
+
+    fn get_chunk(&'a self, metadata: &FileMetadata, offset: u64) -> Result<Vec<u8>, String> {
         unimplemented!()
     }
 }

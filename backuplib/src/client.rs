@@ -88,4 +88,28 @@ impl Baacup for BaacupClient {
             )
         )
     }
+
+    fn download_chunk(&self, metadata: FileMetadata, offset: u64) -> BaacupFuture<Vec<u8>> {
+        let mut download_chunk_info = baacup::DownloadChunkInfo::new();
+
+        let mut file_metadata = baacup::FileMetadata::new();
+        file_metadata.set_file_name(metadata.file_name.into());
+        file_metadata.set_last_modified(metadata.last_modified);
+        file_metadata.set_file_size(metadata.file_size);
+
+        download_chunk_info.set_metadata(file_metadata);
+        download_chunk_info.set_offset(offset);
+
+        let download_chunk_resp = self.0.download_chunk(RequestOptions::new(), download_chunk_info);
+        BaacupFuture::new(download_chunk_resp.drop_metadata()
+            .then(|download_chunk_result|
+                download_chunk_result.map_err(|e| e.to_string()).and_then(|mut data|
+                    match data.get_status() {
+                        baacup::Status::SUCCESS => Ok(data.take_data()),
+                        baacup::Status::ERROR => Err(data.take_error_message()),
+                    }
+                )
+            )
+        )
+    }
 }

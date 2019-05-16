@@ -119,4 +119,22 @@ impl<'a> StorageManager<'a> for SqliteStorageManager {
             .map_err(|e| e.to_string())
             .map(|m| m.len())
     }
+
+    fn get_chunk(&'a self, metadata: &FileMetadata, offset: u64) -> Result<Vec<u8>, String> {
+        let connection = self.connection.lock().unwrap();
+
+        let file_row = files::table.find(&metadata.file_name)
+            .first::<DbFile>(&*connection)
+            .unwrap();
+
+        let mut file = OpenOptions::new()
+            .read(true)
+            .open(file_row.local_filename)
+            .map_err(|e| e.to_string())?;
+
+        file.seek(SeekFrom::Start(offset))?;
+
+        
+        file.read
+    }
 }
