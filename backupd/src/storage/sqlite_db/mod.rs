@@ -76,10 +76,10 @@ impl<'a> StorageManager<'a> for SqliteStorageManager {
         }
     }
 
-    fn append(&'a self, metadata: &FileMetadata, data: &[u8]) -> Result<(), String> {
+    fn append(&'a self, filename: &str, data: &[u8]) -> Result<(), String> {
         let connection = self.connection.lock().unwrap();
 
-        let file_row = files::table.find(&metadata.file_name)
+        let file_row = files::table.find(filename)
             .first::<DbFile>(&*connection)
             .unwrap();
 
@@ -103,10 +103,10 @@ impl<'a> StorageManager<'a> for SqliteStorageManager {
         Ok(!file_is_updated)
     }
 
-    fn get_head(&'a self, metadata: &FileMetadata) -> Result<u64, String> {
+    fn get_head(&'a self, filename: &str) -> Result<u64, String> {
         let connection = self.connection.lock().unwrap();
 
-        let file_row = files::table.find(&metadata.file_name)
+        let file_row = files::table.find(filename)
             .first::<DbFile>(&*connection)
             .unwrap();
 

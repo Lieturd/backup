@@ -20,9 +20,9 @@ impl FileLen for File {
 
 pub trait StorageManager<'a> {
     fn create(&'a self, metadata: &FileMetadata) -> Result<(), String>;
-    fn append(&'a self, metadata: &FileMetadata, data: &[u8]) -> Result<(), String>;
+    fn append(&'a self, filename: &str, data: &[u8]) -> Result<(), String>;
     fn storage_outdated(&'a self, metadata: &FileMetadata) -> Result<bool, String>;
-    fn get_head(&'a self, metadata: &FileMetadata) -> Result<u64, String>;
+    fn get_head(&'a self, filename: &str) -> Result<u64, String>;
 }
 
 #[derive(Debug, Clone)]
@@ -47,8 +47,8 @@ impl<'a> StorageManager<'a> for FileSystem {
         Ok(())
     }
 
-    fn append(&'a self, metadata: &FileMetadata, data: &[u8]) -> Result<(), String> {
-        let full_path = self.base_path.join(&metadata.file_name);
+    fn append(&'a self, filename: &str, data: &[u8]) -> Result<(), String> {
+        let full_path = self.base_path.join(&filename);
         let mut file = OpenOptions::new()
             .write(true)
             .open(full_path)
@@ -62,7 +62,7 @@ impl<'a> StorageManager<'a> for FileSystem {
         Ok(true)
     }
 
-    fn get_head(&'a self, metadata: &FileMetadata) -> Result<u64, String> {
+    fn get_head(&'a self, filename: &str) -> Result<u64, String> {
         unimplemented!()
     }
 }

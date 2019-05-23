@@ -90,7 +90,7 @@ impl<S> Baacup for BaacupImpl<S>
 
         // Get file length
         BaacupFuture::new(self.storage
-            .get_head(&context.file_metadata)
+            .get_head(&context.file_metadata.file_name)
             .map_err(|e| e.to_string()))
     }
 
@@ -104,7 +104,7 @@ impl<S> Baacup for BaacupImpl<S>
 
         // Double-check len
         let file_len = try_future!(self.storage
-            .get_head(&context.file_metadata)
+            .get_head(&context.file_metadata.file_name)
             .map_err(|e| e.to_string()));
         if file_len != chunk.offset {
             return BaacupFuture::new(Err("Bad offset".to_string()));
@@ -112,7 +112,7 @@ impl<S> Baacup for BaacupImpl<S>
 
         // Write data
         try_future!(self.storage
-            .append(&context.file_metadata, &chunk.data)
+            .append(&context.file_metadata.file_name, &chunk.data)
             .map_err(|e| e.to_string()));
 
         // Check if we're done
