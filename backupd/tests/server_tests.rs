@@ -23,86 +23,36 @@ impl InMemoryStorage {
 }
 
 impl<'a> StorageManager<'a> for InMemoryStorage {
-    type File = InMemoryFile;
-
-    fn create_storage(&'a self, metadata: &FileMetadata) -> Result<InMemoryFile, String> {
+    fn create(&self, metadata: &FileMetadata) -> Result<(), String> {
         let data = Vec::new();
         let mut map = self.map_mutex.lock().unwrap();
         map.insert(metadata.file_name.clone(), Arc::new(Mutex::new(data)));
-        map.get_mut(&metadata.file_name)
-            .map(|d| InMemoryFile::new(d.clone()))
-            .ok_or("Unreachable".into())
+        Ok(())
     }
 
-    fn open_storage(&'a self, path: String) -> Result<InMemoryFile, String> {
-        let mut map = self.map_mutex.lock().unwrap();
-        map.get_mut(&path)
-            .map(|d| InMemoryFile::new(d.clone()))
-            .ok_or("Unreachable".into())
+    fn append(&'a self, filename: &str, data: &[u8]) -> Result<(), String> {
+        let map = self.map_mutex.lock()
+            .map_err(|e| e.to_string())?;
+        let file_mutex = map.get_mut(filename)
+            .ok_or("bad filename".to_string())?;
+        let file = file_mutex.lock()
+            .map_err(|e| e.to_string())?;
+        file.extend_from_slice(data);
+        Ok(())
     }
 
     fn storage_outdated(&'a self, metadata: &FileMetadata) -> Result<bool, String> {
-        // Dummy implementation
-        Ok(true)
+        Ok(false)
     }
-}
 
-pub struct InMemoryFile {
-    file_mutex: Arc<Mutex<Vec<u8>>>,
-    position: u64,
-}
-
-impl InMemoryFile {
-    fn new(data: Arc<Mutex<Vec<u8>>>) -> InMemoryFile {
-        InMemoryFile {
-            file_mutex: data,
-            position: 0,
-        }
-    }
-}
-
-impl FileLen for InMemoryFile {
-    fn len(&self) -> Result<u64, String> {
-        let file = self.file_mutex.lock().unwrap();
+    fn get_head(&'a self, filename: &str) -> Result<u64, String> {
+        let map = self.map_mutex.lock()
+            .map_err(|e| e.to_string())?;
+        let file_mutex = map.get_mut(filename)
+            .ok_or("bad filename".to_string())?;
+        let file = file_mutex.lock()
+            .map_err(|e| e.to_string())?;
         Ok(file.len() as u64)
-    }
-}
-
-impl Read for InMemoryFile {
-    fn read(&mut self, buf: &mut [u8]) -> IoResult<usize> {
-        let file = self.file_mutex.lock().unwrap();
-        let len = cmp::min(buf.len(), file.len() - self.position as usize);
-        buf[..len].copy_from_slice(&file[self.position as usize..self.position as usize + len]);
-        self.position += len as u64;
-        Ok(len)
-    }
-}
-
-impl Write for InMemoryFile {
-    fn write(&mut self, buf: &[u8]) -> IoResult<usize> {
-        let mut file = self.file_mutex.lock().unwrap();
-        if self.position != file.len() as u64 {
-            panic!("Cannot write while in the middle of file");
-        }
-        file.extend_from_slice(buf);
-        self.position += buf.len() as u64;
-        Ok(buf.len())
-    }
-
-    fn flush(&mut self) -> IoResult<()> {
-        Ok(())
-    }
-}
-
-impl Seek for InMemoryFile {
-    fn seek(&mut self, seek_from: SeekFrom) -> IoResult<u64> {
-        match seek_from {
-            SeekFrom::Start(pos) => {
-                self.position = pos;
-                Ok(self.position)
-            }
-            _ => unimplemented!(),
-        }
     }
 }
 
