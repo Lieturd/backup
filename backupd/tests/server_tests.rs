@@ -20,6 +20,16 @@ impl InMemoryStorage {
             map_mutex: Arc::new(Mutex::new(HashMap::new())),
         }
     }
+
+    pub fn get_file_contents(&self, filename: &str) -> Result<Vec<u8>, String> {
+        let mut map = self.map_mutex.lock()
+            .map_err(|e| e.to_string())?;
+        let file_mutex = map.get_mut(filename)
+            .ok_or("bad filename".to_string())?;
+        let file = file_mutex.lock()
+            .map_err(|e| e.to_string())?;
+        Ok(file.clone())
+    }
 }
 
 impl<'a> StorageManager<'a> for InMemoryStorage {
@@ -31,11 +41,11 @@ impl<'a> StorageManager<'a> for InMemoryStorage {
     }
 
     fn append(&'a self, filename: &str, data: &[u8]) -> Result<(), String> {
-        let map = self.map_mutex.lock()
+        let mut map = self.map_mutex.lock()
             .map_err(|e| e.to_string())?;
         let file_mutex = map.get_mut(filename)
             .ok_or("bad filename".to_string())?;
-        let file = file_mutex.lock()
+        let mut file = file_mutex.lock()
             .map_err(|e| e.to_string())?;
         file.extend_from_slice(data);
         Ok(())
@@ -46,7 +56,7 @@ impl<'a> StorageManager<'a> for InMemoryStorage {
     }
 
     fn get_head(&'a self, filename: &str) -> Result<u64, String> {
-        let map = self.map_mutex.lock()
+        let mut map = self.map_mutex.lock()
             .map_err(|e| e.to_string())?;
         let file_mutex = map.get_mut(filename)
             .ok_or("bad filename".to_string())?;
@@ -119,11 +129,7 @@ fn test_file_upload() {
                     };
                     server.upload_chunk(chunk).and_then(move |_checksum| {
                         // Get file from storage manager
-                        let mut file = storage_manager.open_storage("test_file".into()).unwrap();
-                        let mut buf = Vec::new();
-
-                        // Read file
-                        file.read_to_end(&mut buf).unwrap();
+                        let mut buf = storage_manager.get_file_contents("test_file".into()).unwrap();
 
                         // Was it the right length?
                         assert_eq!(buf.len(), 2048);
