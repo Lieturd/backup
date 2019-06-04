@@ -32,15 +32,15 @@ before_install:
   export PATH=$PATH:$PWD/protoc-3.6.1/bin/
 
 script:
-- cargo test
+- cargo test --release
 - cargo build --release
 - du -chs target/*
 - du -chs $HOME/.cargo/*
 
 before_cache:
- - cargo clean -p backuplib -p backupd -p backup-cli
+ - rm -rvf target/debug
  - cargo clean --release -p backuplib -p backupd -p backup-cli
- - rm -rfv target/{debug,release}/{build,.fingerprint}/backup{d,lib,-cli}-*
+ - rm -rfv target/release/{build,.fingerprint}/backup{d,lib,-cli}-*
 
 before_deploy:
 - |
