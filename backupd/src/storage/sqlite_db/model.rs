@@ -2,9 +2,9 @@ use crate::storage::sqlite_db::schema::files;
 
 #[derive(Queryable, Insertable, Identifiable)]
 #[table_name="files"]
-#[primary_key(real_filename)]
+#[primary_key(id)]
 pub struct DbFile {
-    pub real_filename: String,
-    pub local_filename: String,
-    pub last_updated: i64,
+    pub id: String,
+    pub filename: String,
+    pub last_modified: i64,
 }

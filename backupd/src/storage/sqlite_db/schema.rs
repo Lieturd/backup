@@ -1,7 +1,7 @@
 table! {
-    files (real_filename) {
-        real_filename -> Text,
-        local_filename -> Text,
-        last_updated -> BigInt,
+    files (id) {
+        id -> Text,
+        filename -> Text,
+        last_modified -> BigInt,
     }
 }

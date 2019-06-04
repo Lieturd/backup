@@ -30,16 +30,17 @@ impl SqliteStorageManager {
 
 impl<'a> StorageManager<'a> for SqliteStorageManager {
     fn create(&'a self, metadata: &FileMetadata) -> Result<(), String> {
-        let local_filename = Uuid::new_v4().to_simple().to_string();
+        let id = Uuid::new_v4().to_simple().to_string();
 
         let connection = self.connection.lock().unwrap();
-        let file_row_result = files::table.find(&metadata.file_name)
+        let file_row_result = files::table
+            .filter(files::filename.eq(&metadata.file_name))
             .first::<DbFile>(&*connection);
 
         match file_row_result {
             Ok(file_row) => {
                 diesel::update(&file_row)
-                    .set(files::last_updated.eq(metadata.last_modified as i64))
+                    .set(files::last_modified.eq(metadata.last_modified as i64))
                     .execute(&*connection)
                     .map_err(|e| e.to_string())?;
 
@@ -47,7 +48,7 @@ impl<'a> StorageManager<'a> for SqliteStorageManager {
                     .write(true)
                     .create(true)
                     .truncate(true)
-                    .open(file_row.local_filename)
+                    .open(file_row.id)
                     .map_err(|e| e.to_string())?;
 
                 Ok(())
@@ -57,13 +58,13 @@ impl<'a> StorageManager<'a> for SqliteStorageManager {
                     .write(true)
                     .create(true)
                     .truncate(true)
-                    .open(&local_filename)
+                    .open(&id)
                     .map_err(|e| e.to_string())?;
 
                 let new_file = DbFile {
-                    real_filename: metadata.file_name.clone(),
-                    local_filename: local_filename,
-                    last_updated: metadata.last_modified as i64,
+                    id: id,
+                    filename: metadata.file_name.clone(),
+                    last_modified: metadata.last_modified as i64,
                 };
 
                 diesel::insert_into(files::table)
@@ -79,13 +80,14 @@ impl<'a> StorageManager<'a> for SqliteStorageManager {
     fn append(&'a self, filename: &str, data: &[u8]) -> Result<(), String> {
         let connection = self.connection.lock().unwrap();
 
-        let file_row = files::table.find(filename)
+        let file_row = files::table
+            .filter(files::filename.eq(&filename))
             .first::<DbFile>(&*connection)
             .unwrap();
 
         let mut file = OpenOptions::new()
             .write(true)
-            .open(file_row.local_filename)
+            .open(file_row.id)
             .map_err(|e| e.to_string())?;
 
         file.write_all(data)
@@ -95,8 +97,9 @@ impl<'a> StorageManager<'a> for SqliteStorageManager {
     fn storage_outdated(&'a self, metadata: &FileMetadata) -> Result<bool, String> {
         let connection = self.connection.lock().unwrap();
 
-        let file_is_updated = files::table.find(&metadata.file_name)
-            .filter(files::last_updated.eq(metadata.last_modified as i64))
+        let file_is_updated = files::table
+            .filter(files::filename.eq(&metadata.file_name))
+            .filter(files::last_modified.eq(metadata.last_modified as i64))
             .first::<DbFile>(&*connection)
             .is_ok();
 
@@ -106,13 +109,14 @@ impl<'a> StorageManager<'a> for SqliteStorageManager {
     fn get_head(&'a self, filename: &str) -> Result<u64, String> {
         let connection = self.connection.lock().unwrap();
 
-        let file_row = files::table.find(filename)
+        let file_row = files::table
+            .filter(files::filename.eq(&filename))
             .first::<DbFile>(&*connection)
             .unwrap();
 
         let mut file = OpenOptions::new()
             .read(true)
-            .open(file_row.local_filename)
+            .open(file_row.id)
             .map_err(|e| e.to_string())?;
 
         file.metadata()
