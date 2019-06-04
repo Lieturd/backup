@@ -35,6 +35,7 @@ script:
 - cargo test
 - cargo build --release
 - du -chs target/*
+- du -chs $HOME/.cargo/*
 
 before_cache:
  - cargo clean -p backuplib -p backupd -p backup-cli
