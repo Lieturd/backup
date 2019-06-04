@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate diesel;
+
 mod server;
 mod storage;
 mod configuration;
@@ -20,7 +23,7 @@ fn main() {
 
     let mut server_builder = ServerBuilder::new_plain();
     server_builder.http.set_port(8000);
-    let baacup_impl = BaacupImpl::new_from_path(filename);
+    let baacup_impl = BaacupImpl::new_from_db_path(&filename);
     server_builder.add_service(BaacupServer::new_service_def(baacup_impl));
     let _server = server_builder.build().unwrap();
 

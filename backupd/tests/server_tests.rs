@@ -20,84 +20,49 @@ impl InMemoryStorage {
             map_mutex: Arc::new(Mutex::new(HashMap::new())),
         }
     }
+
+    pub fn get_file_contents(&self, filename: &str) -> Result<Vec<u8>, String> {
+        let mut map = self.map_mutex.lock()
+            .map_err(|e| e.to_string())?;
+        let file_mutex = map.get_mut(filename)
+            .ok_or("bad filename".to_string())?;
+        let file = file_mutex.lock()
+            .map_err(|e| e.to_string())?;
+        Ok(file.clone())
+    }
 }
 
 impl<'a> StorageManager<'a> for InMemoryStorage {
-    type File = InMemoryFile;
-
-    fn create_storage(&'a self, path: String) -> Result<InMemoryFile, String> {
+    fn create(&self, metadata: &FileMetadata) -> Result<(), String> {
         let data = Vec::new();
         let mut map = self.map_mutex.lock().unwrap();
-        map.insert(path.clone(), Arc::new(Mutex::new(data)));
-        map.get_mut(&path)
-            .map(|d| InMemoryFile::new(d.clone()))
-            .ok_or("Unreachable".into())
-    }
-
-    fn open_storage(&'a self, path: String) -> Result<InMemoryFile, String> {
-        let mut map = self.map_mutex.lock().unwrap();
-        map.get_mut(&path)
-            .map(|d| InMemoryFile::new(d.clone()))
-            .ok_or("Unreachable".into())
-    }
-}
-
-pub struct InMemoryFile {
-    file_mutex: Arc<Mutex<Vec<u8>>>,
-    position: u64,
-}
-
-impl InMemoryFile {
-    fn new(data: Arc<Mutex<Vec<u8>>>) -> InMemoryFile {
-        InMemoryFile {
-            file_mutex: data,
-            position: 0,
-        }
-    }
-}
-
-impl FileLen for InMemoryFile {
-    fn len(&self) -> Result<u64, String> {
-        let file = self.file_mutex.lock().unwrap();
-        Ok(file.len() as u64)
-    }
-}
-
-impl Read for InMemoryFile {
-    fn read(&mut self, buf: &mut [u8]) -> IoResult<usize> {
-        let file = self.file_mutex.lock().unwrap();
-        let len = cmp::min(buf.len(), file.len() - self.position as usize);
-        buf[..len].copy_from_slice(&file[self.position as usize..self.position as usize + len]);
-        self.position += len as u64;
-        Ok(len)
-    }
-}
-
-impl Write for InMemoryFile {
-    fn write(&mut self, buf: &[u8]) -> IoResult<usize> {
-        let mut file = self.file_mutex.lock().unwrap();
-        if self.position != file.len() as u64 {
-            panic!("Cannot write while in the middle of file");
-        }
-        file.extend_from_slice(buf);
-        self.position += buf.len() as u64;
-        Ok(buf.len())
-    }
-
-    fn flush(&mut self) -> IoResult<()> {
+        map.insert(metadata.file_name.clone(), Arc::new(Mutex::new(data)));
         Ok(())
     }
-}
 
-impl Seek for InMemoryFile {
-    fn seek(&mut self, seek_from: SeekFrom) -> IoResult<u64> {
-        match seek_from {
-            SeekFrom::Start(pos) => {
-                self.position = pos;
-                Ok(self.position)
-            }
-            _ => unimplemented!(),
-        }
+    fn append(&'a self, filename: &str, data: &[u8]) -> Result<(), String> {
+        let mut map = self.map_mutex.lock()
+            .map_err(|e| e.to_string())?;
+        let file_mutex = map.get_mut(filename)
+            .ok_or("bad filename".to_string())?;
+        let mut file = file_mutex.lock()
+            .map_err(|e| e.to_string())?;
+        file.extend_from_slice(data);
+        Ok(())
+    }
+
+    fn storage_outdated(&'a self, metadata: &FileMetadata) -> Result<bool, String> {
+        Ok(false)
+    }
+
+    fn get_head(&'a self, filename: &str) -> Result<u64, String> {
+        let mut map = self.map_mutex.lock()
+            .map_err(|e| e.to_string())?;
+        let file_mutex = map.get_mut(filename)
+            .ok_or("bad filename".to_string())?;
+        let file = file_mutex.lock()
+            .map_err(|e| e.to_string())?;
+        Ok(file.len() as u64)
     }
 }
 
@@ -164,11 +129,7 @@ fn test_file_upload() {
                     };
                     server.upload_chunk(chunk).and_then(move |_checksum| {
                         // Get file from storage manager
-                        let mut file = storage_manager.open_storage("test_file".into()).unwrap();
-                        let mut buf = Vec::new();
-
-                        // Read file
-                        file.read_to_end(&mut buf).unwrap();
+                        let mut buf = storage_manager.get_file_contents("test_file".into()).unwrap();
 
                         // Was it the right length?
                         assert_eq!(buf.len(), 2048);
