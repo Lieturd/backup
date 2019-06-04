@@ -34,7 +34,7 @@ before_install:
 script:
 - cargo test
 - cargo build --release
-- find . -type d  # Temporarily inspecting what kind of stuff is being stored
+- du -chs target/*
 
 before_cache:
  - cargo clean -p backuplib -p backupd -p backup-cli
