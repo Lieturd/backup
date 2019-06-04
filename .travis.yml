@@ -1,4 +1,25 @@
 language: rust
+cache: cargo
+
+rust:
+- stable
+# These are taking massive amounts of time so for now disabling them
+#- beta
+#- nightly
+
+matrix:
+#  allow_failures:
+#  - rust: nightly
+  fast_finish: true
+
+os:
+- windows
+- linux
+- osx
+
+before_cache:
+ - cargo clean -p backuplib -p backupd -p backup-cli
+
 before_install:
 - |
   if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then
@@ -12,17 +33,12 @@ before_install:
   fi
   unzip /tmp/protoc-3.6.1.zip -d protoc-3.6.1
   export PATH=$PATH:$PWD/protoc-3.6.1/bin/
+
 script:
-- cargo build --verbose --release
-- cargo test --verbose
-rust:
-- stable
-- beta
-- nightly
-os:
-- windows
-- linux
-- osx
+- cargo test
+- cargo build --release
+- find . -type d  # Temporarily inspecting what kind of stuff is being stored
+
 before_deploy:
 - |
   mkdir artifacts
@@ -38,10 +54,7 @@ before_deploy:
     mv target/release/backup-cli artifacts/backup-cli_osx-x64
     mv target/release/backupd artifacts/backupd_osx-x64
   fi
-matrix:
-  allow_failures:
-  - rust: nightly
-  fast_finish: true
+
 deploy:
   provider: releases
   file_glob: true
@@ -56,6 +69,7 @@ deploy:
   api_key:
     secure:
       secure: kJF71S1qTikbx9a0T3Q4Ra3bUQdhQvuvHB2FTg4bswt98PFZawQDxjqqNts3QeDGgcStMJtJ8pwX5WvDd1aktx0Rr8MEQI+Ni7Y71imiTec/oYMU/Gs/fIn/yB4ZG5Ej3hGt9jk2xzVJKe7XdSdHazJeU9prkl1lE7We0Bp6UXVwgydCE8zm8oaJMdtqNVfXik0yt32Kipp8gTXQOOLqTdaqzHoDe59olj6f5DsEVaLb0s5BEwVwaPWQIw2tynIlCXhVlyjkV4Qou5rARoZRZsEZdtRW84GuDNXuERkKzgsyBC1NHNchWwCDoFGOIad5J4U6Mxm3g/Fq+047Dj8UODZPHwISV4pLu9ucV01DCnI+t7nim/wEQFzPTT2YViKTqqZ8PFmqtLJwERtXFLy/k/FWcqGBLnPOPrVTaR2xwkIHrYKtwhNusmuV5GqfI2wWTnQAcRir/grrqjEuMwUlPRtFxyQayGZFuS+nuQgVGrWongCK4ADxRIsvjjM1BubfL/sYVpUgVVz99fY6far8puFKid+PrJEgnzSab0PcvzT7KVDhNRErd9nXgYIKiZxeQ1yQTcRnh8gOy3Vgkq3G+5ijltihoPRfmQQhy6GgrkL9ngmhiXs56uSSvPsNOgx/idZcdtWD3rZWXVGXhCh6ZeTOTJp/scN0XIBrRh5uWJI=
+
 notifications:
   slack:
     secure: uoXs5Qtf0w2HjegHku/C+SuqdamZhwoPltElZcKMKY2zt8KwiX7y3HiiXBadP++nS4H41M3VCmrq/XRaaFWZt1B3rTIphBHCRT283lSvtIKBT5HFhotZivsfkjUh8ymF3r8+RBir/LRgZr8M5sp62vy8tXK9GQnLy5HDzBv3MlHSVR9BHrPdO+D9pYmFiv00u+x7H+p6ic7+qQChToAHCMbg7pHMuRerD/Lj2iFOhVPLCp4AupJwlQPQRGEZD7ATyEYky9XLuhokL1UaUlBthaXg/URqMPBADTXeCAt9EFkQyYKUUhkrkU7lFS1raRk2oZ9j7K32rH/lKl91LJ4+seOy6d/WHsL0JYGPsQXkoj6Pb1FI60hJoMWovyKuTHQN9iVgcBSKiRbv1osJY3XTerR1oUkukcUGrib+GMtVzwy6kWp2T3ZGt5EDDfwLDGZuFFFLZl+kpQo9n95AeZ3zd0WAAXQb9QRmY2cupHuFpFjTQxkAiWFXyGgFECcv4hG7G8N1Wgk0iClFM9mL5ZfF9IU/Wr0ax4XiZO/De46ObPfjZHTE/rs8gsJEUwkrNJDU27+fya3yVdwwspMiVDmiOPerz8LsZqcpB9ekPOB/uQo6+9/pubMkZkzR5c1JBM5g2aTveGL1szWpAjWHmTcFfdVmI4TNf6b+bkeajCThVAI=
