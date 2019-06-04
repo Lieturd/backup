@@ -17,9 +17,6 @@ os:
 - linux
 - osx
 
-before_cache:
- - cargo clean -p backuplib -p backupd -p backup-cli
-
 before_install:
 - |
   if [[ "$TRAVIS_OS_NAME" == "windows" ]]; then
@@ -38,6 +35,11 @@ script:
 - cargo test
 - cargo build --release
 - find . -type d  # Temporarily inspecting what kind of stuff is being stored
+
+before_cache:
+ - cargo clean -p backuplib -p backupd -p backup-cli
+ - cargo clean --release -p backuplib -p backupd -p backup-cli
+ - rm -rfv target/{debug,release}/{build,.fingerprint}/backup{d,lib,-cli}-*
 
 before_deploy:
 - |
