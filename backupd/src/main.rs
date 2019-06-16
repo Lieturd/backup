@@ -19,13 +19,15 @@ fn main() {
     backuplib::print_hello();
     println!("backupd v{} using backuplib v{}", VERSION, backuplib::VERSION);
 
-    let filename = env::args().skip(1).next().unwrap_or("backup/".into());
+    let filename = env::args().skip(1).next().unwrap_or("backupd/database.sqlite".into());
 
     let mut server_builder = ServerBuilder::new_plain();
     server_builder.http.set_port(8000);
     let baacup_impl = BaacupImpl::new_from_db_path(&filename);
     server_builder.add_service(BaacupServer::new_service_def(baacup_impl));
     let _server = server_builder.build().unwrap();
+
+    println!("Listening to {}:{}", "0.0.0.0", 8000);
 
     loop {
         thread::park();

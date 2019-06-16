@@ -1,3 +1,5 @@
-backup-paths:
+backup_paths:
   - /home/foo/
   - /home/bar/documents/
+server_host: 127.0.0.1
+server_port: 8000
