@@ -21,8 +21,6 @@ pub struct SqliteStorageManager {
 
 impl SqliteStorageManager {
     pub fn new(filename: &str) -> SqliteStorageManager {
-        println!("Opening database {}", filename);
-
         let connection = SqliteConnection::establish(filename).unwrap();
         SqliteStorageManager {
             connection: Arc::new(Mutex::new(connection)),
