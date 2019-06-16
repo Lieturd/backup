@@ -15,9 +15,9 @@ formatted as such:
 
 ```sql
 CREATE TABLE files (
-    real_filename INT NOT NULL PRIMARY KEY,
-    local_filename TEXT NOT NULL,
-    last_updated BIGINT NOT NULL
+    id TEXT NOT NULL PRIMARY KEY,
+    filename TEXT NOT NULL,
+    last_modified BIGINT NOT NULL
 );
 ```
 
@@ -30,4 +30,14 @@ cargo run --release --bin backupd [DATABASE_DIRECTORY]
 
 # To run the client:
 cargo run --release --bin backup-cli [FILE_PATH_TO_UPLOAD]
+```
+
+# Development
+
+Development is easier without the `--release` mode, so just run in
+separate terminals or similar:
+
+```bash
+cargo run --bin backupd
+cargo run --bin backup-cli
 ```
